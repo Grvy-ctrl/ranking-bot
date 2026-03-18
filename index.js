@@ -22,12 +22,11 @@ app.post('/rank', async (req, res) => {
     };
 
     // 1. Get roles
-    const rolesUrl = BASE + '/groups/' + groupId + '/roles?maxPageSize=50';
+    const rolesUrl = `${BASE}/groups/${groupId}/roles?maxPageSize=50`;
     const rolesRes = await fetch(rolesUrl, { headers });
-    const rolesText = await rolesRes.text();
+    const rolesData = await rolesRes.json();
     console.log('Roles status:', rolesRes.status);
 
-    const rolesData = JSON.parse(rolesText);
     if (!rolesData.groupRoles) {
       return res.status(500).json({ error: 'Failed to get roles', detail: rolesData });
     }
@@ -36,16 +35,16 @@ app.post('/rank', async (req, res) => {
     if (!role) {
       return res.status(404).json({ error: 'Role not found: ' + rankId });
     }
-    console.log('Found role:', role.displayName, role.path);
+    console.log('Found role:', role.displayName);
 
-    // 2. Get membership - spaces around == are required by Roblox API
-    const memberUrl = BASE + '/groups/' + groupId + '/memberships?maxPageSize=1&filter=user+%3D%3D+%22users%2F' + userId + '%22';
+    // 2. Get membership - spaces around == required by Roblox API
+    const filter = encodeURIComponent(`user == "users/${userId}"`);
+    const memberUrl = `${BASE}/groups/${groupId}/memberships?maxPageSize=1&filter=${filter}`;
     console.log('Member URL:', memberUrl);
     const memberRes = await fetch(memberUrl, { headers });
-    const memberText = await memberRes.text();
-    console.log('Member status:', memberRes.status, memberText.substring(0, 300));
+    const memberData = await memberRes.json();
+    console.log('Member status:', memberRes.status, JSON.stringify(memberData).substring(0, 200));
 
-    const memberData = JSON.parse(memberText);
     if (!memberData.groupMemberships || memberData.groupMemberships.length === 0) {
       return res.status(404).json({ error: 'User not in group', detail: memberData });
     }
@@ -54,20 +53,20 @@ app.post('/rank', async (req, res) => {
     console.log('Member path:', memberPath);
 
     // 3. PATCH rank
-    const patchUrl = BASE + '/' + memberPath;
+    const patchUrl = `${BASE}/${memberPath}`;
     const patchRes = await fetch(patchUrl, {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ role: role.path })
     });
-    const patchText = await patchRes.text();
-    console.log('Patch status:', patchRes.status, patchText.substring(0, 300));
+    const patchData = await patchRes.json();
+    console.log('Patch status:', patchRes.status, JSON.stringify(patchData).substring(0, 200));
 
     if (patchRes.ok) {
       console.log('SUCCESS: Ranked', userId, '->', role.displayName);
       return res.json({ success: true, role: role.displayName });
     } else {
-      return res.status(500).json({ error: 'Patch failed', detail: JSON.parse(patchText) });
+      return res.status(500).json({ error: 'Patch failed', detail: patchData });
     }
 
   } catch (e) {
@@ -78,8 +77,3 @@ app.post('/rank', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Ranking server running on port', PORT));
-```
-
-The key fix is the membership filter URL — spaces around `==` encoded as `+`:
-```
-filter=user+%3D%3D+%22users%2F7649067516%22
