@@ -22,8 +22,7 @@ app.post('/rank', async (req, res) => {
     };
 
     // 1. Get roles
-    const rolesUrl = `${BASE}/groups/${groupId}/roles?maxPageSize=50`;
-    const rolesRes = await fetch(rolesUrl, { headers });
+    const rolesRes = await fetch(`${BASE}/groups/${groupId}/roles?maxPageSize=50`, { headers });
     const rolesData = await rolesRes.json();
     console.log('Roles status:', rolesRes.status);
 
@@ -35,32 +34,23 @@ app.post('/rank', async (req, res) => {
     if (!role) {
       return res.status(404).json({ error: 'Role not found: ' + rankId });
     }
-    console.log('Found role:', role.displayName);
+    console.log('Found role:', role.displayName, role.path);
 
-    // 2. Get membership - spaces around == required by Roblox API
-    const filter = encodeURIComponent(`user == "users/${userId}"`);
-    const memberUrl = `${BASE}/groups/${groupId}/memberships?maxPageSize=1&filter=${filter}`;
-    console.log('Member URL:', memberUrl);
-    const memberRes = await fetch(memberUrl, { headers });
-    const memberData = await memberRes.json();
-    console.log('Member status:', memberRes.status, JSON.stringify(memberData).substring(0, 200));
+    // 2. Get membership path directly - Roblox format: groups/{id}/memberships/{userId}
+    // The membership path is constructed directly, no need to query
+    const membershipPath = `groups/${groupId}/memberships/${userId}`;
+    console.log('Using membership path:', membershipPath);
 
-    if (!memberData.groupMemberships || memberData.groupMemberships.length === 0) {
-      return res.status(404).json({ error: 'User not in group', detail: memberData });
-    }
-
-    const memberPath = memberData.groupMemberships[0].path;
-    console.log('Member path:', memberPath);
-
-    // 3. PATCH rank
-    const patchUrl = `${BASE}/${memberPath}`;
+    // 3. PATCH rank directly
+    const patchUrl = `${BASE}/${membershipPath}`;
+    console.log('Patching:', patchUrl);
     const patchRes = await fetch(patchUrl, {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ role: role.path })
     });
     const patchData = await patchRes.json();
-    console.log('Patch status:', patchRes.status, JSON.stringify(patchData).substring(0, 200));
+    console.log('Patch status:', patchRes.status, JSON.stringify(patchData).substring(0, 300));
 
     if (patchRes.ok) {
       console.log('SUCCESS: Ranked', userId, '->', role.displayName);
