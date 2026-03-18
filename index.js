@@ -33,7 +33,7 @@ app.post('/rank', async (req, res) => {
 
     // 2. Get membership
     const memberRes = await fetch(
-      `${BASE}/groups/${groupId}/memberships?filter=user=="users/${userId}"&maxPageSize=1`,
+      `${BASE}/groups/${groupId}/memberships?filter=user%3D%3D%22users%2F${userId}%22&maxPageSize=1`,
       { headers }
     );
     const memberData = await memberRes.json();
