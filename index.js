@@ -40,7 +40,7 @@ app.post('/rank', async (req, res) => {
     console.log('Found role:', role.displayName, role.path);
 
     // 2. Get membership
-    const memberUrl = BASE + '/groups/' + groupId + '/memberships?filter=user%3D%3D%22users%2F' + userId + '%22&maxPageSize=1';
+    const memberUrl = BASE + '/groups/' + groupId + '/memberships?maxPageSize=1&filter=user+%3D%3D+%22users%2F' + userId + '%22';
     console.log('Fetching membership from:', memberUrl);
     const memberRes = await fetch(memberUrl, { headers });
     const memberText = await memberRes.text();
