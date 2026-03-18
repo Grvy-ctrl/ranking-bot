@@ -23,10 +23,9 @@ app.post('/rank', async (req, res) => {
 
     // 1. Get roles
     const rolesUrl = BASE + '/groups/' + groupId + '/roles?maxPageSize=50';
-    console.log('Fetching roles from:', rolesUrl);
     const rolesRes = await fetch(rolesUrl, { headers });
     const rolesText = await rolesRes.text();
-    console.log('Roles status:', rolesRes.status, 'body:', rolesText.substring(0, 200));
+    console.log('Roles status:', rolesRes.status);
 
     const rolesData = JSON.parse(rolesText);
     if (!rolesData.groupRoles) {
@@ -39,12 +38,12 @@ app.post('/rank', async (req, res) => {
     }
     console.log('Found role:', role.displayName, role.path);
 
-    // 2. Get membership
+    // 2. Get membership - spaces around == are required by Roblox API
     const memberUrl = BASE + '/groups/' + groupId + '/memberships?maxPageSize=1&filter=user+%3D%3D+%22users%2F' + userId + '%22';
-    console.log('Fetching membership from:', memberUrl);
+    console.log('Member URL:', memberUrl);
     const memberRes = await fetch(memberUrl, { headers });
     const memberText = await memberRes.text();
-    console.log('Member status:', memberRes.status, 'body:', memberText.substring(0, 200));
+    console.log('Member status:', memberRes.status, memberText.substring(0, 300));
 
     const memberData = JSON.parse(memberText);
     if (!memberData.groupMemberships || memberData.groupMemberships.length === 0) {
@@ -54,16 +53,15 @@ app.post('/rank', async (req, res) => {
     const memberPath = memberData.groupMemberships[0].path;
     console.log('Member path:', memberPath);
 
-    // 3. PATCH
+    // 3. PATCH rank
     const patchUrl = BASE + '/' + memberPath;
-    console.log('Patching:', patchUrl, 'with role:', role.path);
     const patchRes = await fetch(patchUrl, {
       method: 'PATCH',
       headers,
       body: JSON.stringify({ role: role.path })
     });
     const patchText = await patchRes.text();
-    console.log('Patch status:', patchRes.status, 'body:', patchText.substring(0, 200));
+    console.log('Patch status:', patchRes.status, patchText.substring(0, 300));
 
     if (patchRes.ok) {
       console.log('SUCCESS: Ranked', userId, '->', role.displayName);
@@ -73,10 +71,15 @@ app.post('/rank', async (req, res) => {
     }
 
   } catch (e) {
-    console.error('CRASH:', e.message, e.stack);
+    console.error('CRASH:', e.message);
     return res.status(500).json({ error: e.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Ranking server running on port', PORT));
+```
+
+The key fix is the membership filter URL — spaces around `==` encoded as `+`:
+```
+filter=user+%3D%3D+%22users%2F7649067516%22
